@@ -12,6 +12,12 @@ struct MyString {
 
 std::vector<MyString> protector;
 
+/*
+ * if meet the need, return true; otherwise return false
+ */
+typedef bool(*Comparator)(const char* left, const char* right);
+
+
 static bool delString(int argc, char* argv[])
 {
 	for (std::vector<MyString>::iterator it = protector.begin(); it != protector.end(); ++it) {
@@ -48,16 +54,17 @@ static bool setString(int argc, char* argv[])
 	return true;
 }
 
-static duint ismystring(int argc, duint* argv, void* userdata)
-{
+
+
+static duint CheckString(int argc, duint* argv, void* userdata, Comparator comp) {
 	/*
 	@param memory: memory address with a string.
 	@param type: $ANSI or $UNICODE (this variables was setted for the plugin).
 	@param index: identifier of the string setted (it's decimal, so.. U need to use a dot in the end of the number).
-	
+
 	@return: true if the memory address is a pointer to the string stored.
 	*/
-	
+
 	char *argparse;
 	duint step;
 	duint va;
@@ -65,39 +72,65 @@ static duint ismystring(int argc, duint* argv, void* userdata)
 	if (!DbgIsDebugging()) {
 		_plugin_logputs("[" PLUGIN_NAME "] You need to be debugging to use this expression functions\n");
 		return false;
-	} else if (protector.empty()) {
+	}
+	else if (protector.empty()) {
 		_plugin_logprintf("[" PLUGIN_NAME "] You need to set a string with code %d (use setString)\n", argv[1]);
 		return false;
-	} else if (argv[1] < 1 && argv[1] > 2) {
+	}
+	else if (argv[1] < 1 && argv[1] > 2) {
 		_plugin_logprintf("[" PLUGIN_NAME "] Second argument only supports 1 or 2 (or $ANSI and $UNICODE) to set the string type.\n");
 		return false;
 	}
-	
+
 	argparse = (char *)malloc(sizeof(char)*MAX_SIZE);
 	va = argv[0];
-	
+
 	step = argv[1];
 	for (int i = 0; i < MAX_SIZE; i++) {
-		if (!DbgMemIsValidReadPtr(va+(i*step))) {
+		if (!DbgMemIsValidReadPtr(va + (i*step))) {
 			_plugin_logprintf("[" PLUGIN_NAME "] Error reading [0x%x+0x%.2x*2]\n", va, i);
 			return 0;
 		}
 
-		DbgMemRead(va+(i*step), argparse+i, sizeof(char));
-		if (*(argparse+i) == '\x00')
+		DbgMemRead(va + (i*step), argparse + i, sizeof(char));
+		if (*(argparse + i) == '\x00')
 			break;
 	}
-	
+
 	for (std::vector<MyString>::iterator it = protector.begin(); it != protector.end(); ++it) {
 
-		if (it->code == argv[2] && strcmp(it->text, argparse) == 0) {
+		if (it->code == argv[2] && comp(it->text, argparse)) {
 			_plugin_logputs("[" PLUGIN_NAME "] Condition successful");
 			return true;
 		}
 	}
 	_plugin_logprintf("[" PLUGIN_NAME "] Index %d not found\n", argv[2]);
 	return false;
+}
 
+static bool StringEquals(const char* left, const char* dynamicStr) {
+	return strcmp(left, dynamicStr) == 0;
+}
+
+static bool StringContains(const char* left, const char* dynamicStr) {
+	return strstr(dynamicStr, left) != NULL;
+}
+
+static bool StringPrefix(const char* left, const char* dynamicStr) {
+	return strstr(dynamicStr, left) == dynamicStr;
+}
+
+static duint ismystring(int argc, duint* argv, void* userdata)
+{
+	return CheckString(argc, argv, userdata, StringEquals);
+}
+
+static duint CbContains(int argc, duint* argv, void* userdata) {
+	return CheckString(argc, argv, userdata, StringContains);
+}
+
+static duint CbPrefix(int argc, duint* argv, void* userdata) {
+	return CheckString(argc, argv, userdata, StringPrefix);
 }
 
 //Initialize your plugin data here.
@@ -112,6 +145,12 @@ bool pluginInit(PLUG_INITSTRUCT* initStruct)
     if (!_plugin_registerexprfunction(pluginHandle, PLUGIN_NAME ".ismystring", 3, ismystring, nullptr))
 		_plugin_logputs("[" PLUGIN_NAME "] Error register the \"" PLUGIN_NAME ".ismystring\" expression function!");
 	
+	if (!_plugin_registerexprfunction(pluginHandle, "str.contains", 3, CbContains, nullptr))
+		_plugin_logputs("[" PLUGIN_NAME "] Error register the \"" "str.contains\" expression function!");
+	if (!_plugin_registerexprfunction(pluginHandle, "str.prefix", 3, CbPrefix, nullptr))
+		_plugin_logputs("[" PLUGIN_NAME "] Error register the \"" "str.prefix\" expression function!");
+
+
 	DbgCmdExecDirect("$ANSI=1");
 	DbgCmdExecDirect("$UNICODE=2");
 
