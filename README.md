@@ -6,6 +6,16 @@ Plugin template for x64dbg that allow the possibility to set breakpoints when a 
 
 Grab the latest [release](https://github.com/pastaCLS/cndsteroids/blob/master/bin/x32/cndsteroids.dp32) and copy to the x32dbg's plugin floder.
 
+## x64dbg Command Function
+- setString 1, "some string"
+- delString 1
+- clearStrings
+
+## x64dbg Expression Function
+- cndsteroids.ismystring([esp+4], $ANSI, 1) 
+- str.contains([esp+4], $ANSI, 1)
+- str.prefix([esp+4], $ANSI, 1) 
+
 ## How it works?
 
 The plugin creates the command setString, this command asociate the string with a number, later the number will identify the string in another commands
