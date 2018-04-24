@@ -15,6 +15,7 @@ Grab the latest [release](https://github.com/pastaCLS/cndsteroids/blob/master/bi
 - cndsteroids.ismystring([esp+4], $ANSI, 1) 
 - str.contains([esp+4], $ANSI, 1)
 - str.prefix([esp+4], $ANSI, 1) 
+- str.suffix([esp+4], $ANSI, 1)
 
 ## How it works?
 
