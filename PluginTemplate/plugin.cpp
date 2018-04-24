@@ -30,6 +30,14 @@ static bool delString(int argc, char* argv[])
 	return false;
 }
 
+static bool clearStrings(int argc, char* argv[]) {
+	_plugin_logprintf("[" PLUGIN_NAME "] removes all strings\n");
+
+	protector.clear();
+
+	return true;
+}
+
 static bool setString(int argc, char* argv[])
 {
 	/*
@@ -120,6 +128,21 @@ static bool StringPrefix(const char* left, const char* dynamicStr) {
 	return strstr(dynamicStr, left) == dynamicStr;
 }
 
+static bool StringSuffix(const char* stdStr, const char* dynamicStr) {
+	const char * suffix = dynamicStr;
+
+	if (stdStr == NULL || suffix == NULL)
+		return 0;
+
+	size_t str_len = strlen(stdStr);
+	size_t suffix_len = strlen(suffix);
+
+	if (suffix_len > str_len)
+		return 0;
+
+	return 0 == strncmp(stdStr + str_len - suffix_len, suffix, suffix_len);
+}
+
 static duint ismystring(int argc, duint* argv, void* userdata)
 {
 	return CheckString(argc, argv, userdata, StringEquals);
@@ -133,6 +156,11 @@ static duint CbPrefix(int argc, duint* argv, void* userdata) {
 	return CheckString(argc, argv, userdata, StringPrefix);
 }
 
+static duint CbSuffix(int argc, duint* argv, void* userdata) {
+	return CheckString(argc, argv, userdata, StringSuffix);
+}
+
+
 //Initialize your plugin data here.
 bool pluginInit(PLUG_INITSTRUCT* initStruct)
 {
@@ -141,14 +169,21 @@ bool pluginInit(PLUG_INITSTRUCT* initStruct)
 
 	if (!_plugin_registercommand(pluginHandle, "delString", delString, false))
 		_plugin_logputs("[" PLUGIN_NAME "] Error registering the \"delString\" command!");
+
+	if (!_plugin_registercommand(pluginHandle, "clearStrings", clearStrings, false))
+		_plugin_logputs("[" PLUGIN_NAME "] Error registering the \"clearStrings\" command!");
 	
     if (!_plugin_registerexprfunction(pluginHandle, PLUGIN_NAME ".ismystring", 3, ismystring, nullptr))
 		_plugin_logputs("[" PLUGIN_NAME "] Error register the \"" PLUGIN_NAME ".ismystring\" expression function!");
 	
 	if (!_plugin_registerexprfunction(pluginHandle, "str.contains", 3, CbContains, nullptr))
 		_plugin_logputs("[" PLUGIN_NAME "] Error register the \"" "str.contains\" expression function!");
+	
 	if (!_plugin_registerexprfunction(pluginHandle, "str.prefix", 3, CbPrefix, nullptr))
 		_plugin_logputs("[" PLUGIN_NAME "] Error register the \"" "str.prefix\" expression function!");
+
+	if (!_plugin_registerexprfunction(pluginHandle, "str.suffix", 3, CbSuffix, nullptr))
+		_plugin_logputs("[" PLUGIN_NAME "] Error register the \"" "str.suffix\" expression function!");
 
 
 	DbgCmdExecDirect("$ANSI=1");
@@ -162,6 +197,10 @@ bool pluginStop()
 {
     _plugin_unregistercommand(pluginHandle, "setString");
 	_plugin_unregistercommand(pluginHandle, "delString");
+	_plugin_unregistercommand(pluginHandle, "clearStrings");
 	_plugin_unregisterexprfunction(pluginHandle, PLUGIN_NAME ".ismystring");
+	_plugin_unregisterexprfunction(pluginHandle, "str.contains");
+	_plugin_unregisterexprfunction(pluginHandle, "str.prefix");
+	_plugin_unregisterexprfunction(pluginHandle, "str.suffix");
     return true;
 }
